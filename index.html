@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZayForge Launcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Airstrike', 'Segoe UI', 'Orbitron', 'Courier New', monospace;
+            background: #0a0a12;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Particle canvas (recreates game's starfield feel) */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Main container – glassmorphism + border glow */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 750px;
+            margin: 5vh auto;
+            background: rgba(18, 18, 28, 0.75);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            padding: 32px 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(192, 132, 252, 0.2);
+            border: 1px solid rgba(192, 132, 252, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        /* Game-like header with glow */
+        h1 {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #c084fc 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 15px rgba(192, 132, 252, 0.5);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            border-top: 1px solid rgba(192, 132, 252, 0.3);
+            display: inline-block;
+            width: auto;
+            padding-top: 8px;
+        }
+
+        /* Info panel – like game UI windows */
+        .game-info {
+            background: rgba(0, 0, 0, 0.55);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .info-row {
+            margin: 12px 0;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .info-label {
+            font-weight: 700;
+            color: #c084fc;
+            width: 110px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            color: #e2e8f0;
+            flex: 1;
+            font-weight: 500;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .release-notes {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 16px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 180px;
+            overflow-y: auto;
+            border-left: 3px solid #c084fc;
+        }
+
+        .release-notes h3 {
+            color: #60a5fa;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .release-notes pre {
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            line-height: 1.4;
+        }
+
+        /* Toggle switch style (game-like) */
+        .checkbox-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 40px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            border: 1px solid rgba(192, 132, 252, 0.3);
+        }
+
+        .checkbox-container label {
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #c084fc;
+            filter: drop-shadow(0 0 2px #c084fc);
+        }
+
+        /* Main action button – mimics game button glow */
+        .action-button {
+            background: linear-gradient(135deg, #c084fc 0%, #60a5fa 100%);
+            border: none;
+            color: white;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1.3rem;
+            padding: 14px 28px;
+            border-radius: 60px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 15px rgba(192, 132, 252, 0.4);
+            margin: 20px 0 10px;
+        }
+
+        .action-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(192, 132, 252, 0.6);
+            filter: brightness(1.05);
+        }
+
+        .action-button:active {
+            transform: translateY(1px);
+        }
+
+        .action-button.installed {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .action-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(0.2);
+        }
+
+        /* Progress bar – game healthbar style */
+        .progress-container {
+            margin: 15px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 28px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 40px;
+            overflow: hidden;
+            border: 1px solid #60a5fa;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #c084fc, #60a5fa);
+            width: 0%;
+            transition: width 0.2s linear;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 0 2px black;
+        }
+
+        /* Status messages */
+        .status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+        }
+
+        .status.info {
+            background: rgba(59, 130, 246, 0.25);
+            color: #90cdf4;
+            border: 1px solid #3b82f6;
+        }
+
+        .status.success {
+            background: rgba(16, 185, 129, 0.25);
+            color: #6ee7b7;
+            border: 1px solid #10b981;
+        }
+
+        .status.error {
+            background: rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #c084fc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .version-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .badge-stable {
+            background: #10b98120;
+            color: #34d399;
+            border: 1px solid #34d399;
+        }
+
+        .badge-prerelease {
+            background: #f59e0b20;
+            color: #fbbf24;
+            border: 1px solid #fbbf24;
+        }
+
+        /* Scrollbar matching game */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e2e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c084fc;
+            border-radius: 8px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas"></canvas>
+    <div class="container">
+        <h1>⚔️ ZAYFORGE</h1>
+        <div style="text-align: center;"><span class="subtitle">LAUNCHER // v1.0</span></div>
+        
+        <div class="game-info" id="gameInfo" style="display: none;">
+            <div class="info-row">
+                <span class="info-label">RELEASE</span>
+                <span class="info-value" id="version">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">STATUS</span>
+                <span class="info-value" id="releaseType">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">DATE</span>
+                <span class="info-value" id="releaseDate">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">SIZE</span>
+                <span class="info-value" id="fileSize">-</span>
+            </div>
+            <div class="release-notes">
+                <h3>📜 PATCH NOTES</h3>
+                <pre id="notesContent">Awaiting update...</pre>
+            </div>
+        </div>
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="includePrereleases">
+            <label for="includePrereleases">🔮 INCLUDE PRE-RELEASES (BETA BUILDS)</label>
+        </div>
+        
+        <button class="action-button" id="actionButton">
+            🔍 INITIALIZING...
+        </button>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+        </div>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        // ---------- Particle Background (like game menu) ----------
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let animFrame;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        function initParticles() {
+            particles = [];
+            const count = Math.min(120, Math.floor(window.innerWidth * 0.1));
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 2.5 + 1,
+                    speed: Math.random() * 30 + 15,
+                    alpha: Math.random() * 0.6 + 0.2
+                });
+            }
+        }
+        
+        function drawParticles(dt) {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let p of particles) {
+                p.y -= p.speed * dt;
+                if (p.y < -10) {
+                    p.y = canvas.height + 10;
+                    p.x = Math.random() * canvas.width;
+                }
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(192, 132, 252, ${p.alpha * 0.6})`;
+                ctx.fill();
+            }
+        }
+        
+        let lastTime = performance.now();
+        function animateParticles() {
+            const now = performance.now();
+            let dt = Math.min(0.033, (now - lastTime) / 1000);
+            lastTime = now;
+            if (canvas.width !== window.innerWidth) resizeCanvas();
+            drawParticles(dt);
+            requestAnimationFrame(animateParticles);
+        }
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initParticles();
+        });
+        resizeCanvas();
+        initParticles();
+        animateParticles();
+        
+        // ---------- Launcher Logic ----------
+        let currentRelease = null;
+        let currentGamePath = null;
+        let currentLovePath = null;
+        let isInstalled = false;
+        
+        const actionButton = document.getElementById('actionButton');
+        const statusDiv = document.getElementById('status');
+        const gameInfoDiv = document.getElementById('gameInfo');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const includePrereleases = document.getElementById('includePrereleases');
+        
+        function showStatus(message, type = 'info') {
+            statusDiv.innerHTML = message;
+            statusDiv.className = `status ${type}`;
+            if (type === 'info') {
+                setTimeout(() => {
+                    if (statusDiv.innerHTML === message) statusDiv.style.opacity = '0';
+                    setTimeout(() => {
+                        if (statusDiv.innerHTML === message) statusDiv.innerHTML = '';
+                        statusDiv.style.opacity = '1';
+                    }, 300);
+                }, 3500);
+            }
+        }
+        
+        function showProgress(show) {
+            progressContainer.style.display = show ? 'block' : 'none';
+        }
+        
+        function updateProgress(progress) {
+            const percent = Math.round(progress);
+            progressFill.style.width = `${percent}%`;
+            progressFill.textContent = `${percent}%`;
+        }
+        
+        function updateButtonState() {
+            if (!currentRelease) {
+                actionButton.disabled = true;
+                actionButton.innerHTML = '🔍 SCANNING REALMS...';
+                actionButton.classList.remove('installed');
+                return;
+            }
+            actionButton.disabled = false;
+            if (isInstalled && currentLovePath) {
+                actionButton.innerHTML = '🎮 ENTER THE FORGE';
+                actionButton.classList.add('installed');
+            } else if (isInstalled && !currentLovePath) {
+                actionButton.innerHTML = '⚙️ INSTALL LOVE2D ENGINE';
+                actionButton.classList.remove('installed');
+            } else {
+                const size = currentRelease.assetSize ? ` (${(currentRelease.assetSize / 1024 / 1024).toFixed(1)} MB)` : '';
+                actionButton.innerHTML = `⬇️ DEPLOY ZAYFORGE ${currentRelease.version}${size}`;
+                actionButton.classList.remove('installed');
+            }
+        }
+        
+        ipcRenderer.on('download-progress', (event, data) => {
+            updateProgress(data.progress);
+            if (data.progress >= 100) setTimeout(() => showProgress(false), 800);
+        });
+        
+        async function checkLove2D() {
+            const result = await ipcRenderer.invoke('check-love2d');
+            if (result.success) {
+                currentLovePath = result.path;
+                return true;
+            }
+            return false;
+        }
+        
+        async function downloadLove2D() {
+            showProgress(true);
+            showStatus('🔧 DOWNLOADING LOVE2D RUNTIME...', 'info');
+            updateButtonState();
+            try {
+                const result = await ipcRenderer.invoke('download-love2d');
+                if (result.success) {
+                    currentLovePath = result.path;
+                    showStatus('✅ LOVE2D INSTALLED SUCCESSFULLY', 'success');
+                    showProgress(false);
+                    await checkForUpdates();
+                    return true;
+                } else {
+                    showStatus(`❌ RUNTIME FAILED: ${result.error}`, 'error');
+                    showProgress(false);
+                    return false;
+                }
+            } catch (error) {
+                showStatus(`⚠️ ERROR: ${error.message}`, 'error');
+                showProgress(false);
+                return false;
+            }
+        }
+        
+        async function downloadGame() {
+            if (!currentRelease) {
+                showStatus('No release data. Refresh first.', 'error');
+                return false;
+            }
+            showProgress(true);
+            showStatus(`⬇️ DOWNLOADING ZAYFORGE ${currentRelease.version}...`, 'info');
+            actionButton.disabled = true;
+            try {
+                const result = await ipcRenderer.invoke('download-game', currentRelease.downloadUrl, currentRelease.version);
+                if (result.success) {
+                    currentGamePath = result.path;
+                    isInstalled = true;
+                    showStatus('✨ GAME READY!', 'success');
+                    showProgress(false);
+                    await checkLove2D();
+                    updateButtonState();
+                    return true;
+                } else {
+                    showStatus(`❌ DOWNLOAD FAILED: ${result.error}`, 'error');
+                    showProgress(false);
+                    return false;
+                }
+            } catch (error) {
+                showStatus(`⚠️ ${error.message}`, 'error');
+                showProgress(false);
+                return false;
+            } finally {
+                actionButton.disabled = false;
+            }
+        }
+        
+        async function launchGame() {
+            if (!currentGamePath) {
+                showStatus('Game not found – please install.', 'error');
+                return;
+            }
+            if (!currentLovePath) {
+                showStatus('Love2D missing – installing now...', 'info');
+                const success = await downloadLove2D();
+                if (!success) return;
+            }
+            showStatus('🔥 FORGING REALITY...', 'info');
+            actionButton.disabled = true;
+            try {
+                const result = await ipcRenderer.invoke('run-game', currentLovePath, currentGamePath);
+                if (result.success) {
+                    showStatus('🎉 GAME LAUNCHED! CLOSE LAUNCHER OR ENJOY.', 'success');
+                } else {
+                    showStatus(`❌ LAUNCH ERROR: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`⚠️ ${error.message}`, 'error');
+            } finally {
+                actionButton.disabled = false;
+            }
+        }
+        
+        async function checkForUpdates() {
+            actionButton.disabled = true;
+            actionButton.innerHTML = '<span class="loading"></span> CONTACTING SHARD...';
+            try {
+                const result = await ipcRenderer.invoke('get-releases', includePrereleases.checked);
+                if (result.success) {
+                    currentRelease = result.release;
+                    isInstalled = result.isInstalled;
+                    if (isInstalled) {
+                        const installed = await ipcRenderer.invoke('get-installed-version');
+                        if (installed) currentGamePath = installed.path;
+                    }
+                    displayGameInfo(currentRelease);
+                    await checkLove2D();
+                    updateButtonState();
+                    showStatus(currentRelease.isPreRelease ? `🔮 PRE-RELEASE ${currentRelease.version} DETECTED` : `⚡ STABLE BUILD ${currentRelease.version}`, 'success');
+                } else {
+                    showStatus(`⚠️ UPDATE CHECK FAILED: ${result.error}`, 'error');
+                    actionButton.innerHTML = '⟳ RETRY';
+                }
+            } catch (err) {
+                showStatus(`⚠️ NETWORK ERROR: ${err.message}`, 'error');
+                actionButton.innerHTML = '⟳ RETRY';
+            } finally {
+                actionButton.disabled = false;
+            }
+        }
+        
+        function displayGameInfo(release) {
+            gameInfoDiv.style.display = 'block';
+            document.getElementById('version').innerHTML = `<strong style="color:#c084fc">${release.version}</strong>${isInstalled ? ' <span style="color:#10b981;">✓ DEPLOYED</span>' : ''}`;
+            const releaseTypeHtml = release.isPreRelease ? 
+                '<span class="version-badge badge-prerelease">⚠️ PRERELEASE</span>' : 
+                '<span class="version-badge badge-stable">✅ STABLE</span>';
+            document.getElementById('releaseType').innerHTML = releaseTypeHtml;
+            document.getElementById('releaseDate').textContent = new Date(release.releaseDate).toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' });
+            if (release.assetSize) {
+                const sizeMB = (release.assetSize / 1024 / 1024).toFixed(1);
+                document.getElementById('fileSize').innerHTML = `${sizeMB} MB <span style="color:#64748b;">(compressed)</span>`;
+            }
+            document.getElementById('notesContent').textContent = release.releaseNotes || '✨ No ancient scrolls found for this version.';
+        }
+        
+        async function handleActionButtonClick() {
+            if (!currentRelease) {
+                await checkForUpdates();
+                return;
+            }
+            if (isInstalled && currentLovePath) await launchGame();
+            else if (isInstalled && !currentLovePath) await downloadLove2D();
+            else await downloadGame();
+        }
+        
+        actionButton.addEventListener('click', handleActionButtonClick);
+        includePrereleases.addEventListener('change', () => checkForUpdates());
+        checkForUpdates();
+    </script>
+</body>
+</html>

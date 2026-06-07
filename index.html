@@ -1,0 +1,1675 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ZayForge Launcher</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                user-select: none;
+            }
+
+            body {
+                font-family:
+                    "Airstrike", "Segoe UI", "Orbitron", "Courier New",
+                    monospace;
+                background: #0a0a12;
+                min-height: 100vh;
+                overflow-x: hidden;
+                overflow-y: auto;
+                position: relative;
+            }
+
+            /* Particle canvas (recreates game's starfield feel) */
+            #particle-canvas {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            /* Main container – glassmorphism + border glow */
+            .container {
+                position: relative;
+                z-index: 1;
+                max-width: 750px;
+                margin: 5vh auto;
+                background: rgba(18, 18, 28, 0.75);
+                backdrop-filter: blur(12px);
+                border-radius: 32px;
+                padding: 32px 40px;
+                box-shadow:
+                    0 20px 40px rgba(0, 0, 0, 0.5),
+                    0 0 0 1px rgba(192, 132, 252, 0.2);
+                border: 1px solid rgba(192, 132, 252, 0.3);
+                transition: all 0.2s ease;
+            }
+
+            /* Game-like header with glow */
+            h1 {
+                text-align: center;
+                font-size: 3rem;
+                font-weight: 800;
+                letter-spacing: 2px;
+                background: linear-gradient(135deg, #c084fc 0%, #60a5fa 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                text-shadow: 0 0 15px rgba(192, 132, 252, 0.5);
+                margin-bottom: 8px;
+            }
+
+            .subtitle {
+                text-align: center;
+                color: #94a3b8;
+                font-size: 0.8rem;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                margin-bottom: 30px;
+                border-top: 1px solid rgba(192, 132, 252, 0.3);
+                display: block;
+                padding-top: 8px;
+            }
+
+            /* ═══════════════════════════════════════════════
+           ACCOUNT PANEL
+           ═══════════════════════════════════════════════ */
+
+            .account-panel {
+                background: rgba(0, 0, 0, 0.55);
+                border-radius: 20px;
+                padding: 20px;
+                margin-bottom: 25px;
+                border: 1px solid rgba(192, 132, 252, 0.3);
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                transition: all 0.3s ease;
+            }
+
+            .account-panel h2 {
+                color: #c084fc;
+                font-size: 1.1rem;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                margin-bottom: 18px;
+                border-bottom: 1px solid rgba(192, 132, 252, 0.2);
+                padding-bottom: 8px;
+            }
+
+            /* Logged-in view */
+            .account-profile {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+            }
+
+            .avatar-container {
+                position: relative;
+                flex-shrink: 0;
+            }
+
+            .avatar-img {
+                width: 64px;
+                height: 64px;
+                border-radius: 12px;
+                border: 2px solid #c084fc;
+                box-shadow: 0 0 12px rgba(192, 132, 252, 0.3);
+                image-rendering: pixelated;
+                object-fit: cover;
+                background: rgba(0, 0, 0, 0.3);
+            }
+
+            .avatar-placeholder {
+                width: 64px;
+                height: 64px;
+                border-radius: 12px;
+                border: 2px dashed rgba(192, 132, 252, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.8rem;
+                color: rgba(192, 132, 252, 0.4);
+                background: rgba(0, 0, 0, 0.3);
+            }
+
+            .avatar-upload-overlay {
+                position: absolute;
+                bottom: -4px;
+                right: -4px;
+                width: 24px;
+                height: 24px;
+                background: #c084fc;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.7rem;
+                cursor: pointer;
+                color: #fff;
+                border: 2px solid #0a0a12;
+                box-shadow: 0 0 6px rgba(192, 132, 252, 0.5);
+                transition: transform 0.2s;
+            }
+
+            .avatar-upload-overlay:hover {
+                transform: scale(1.2);
+            }
+
+            .account-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .account-username {
+                color: #e2e8f0;
+                font-size: 1.2rem;
+                font-weight: 700;
+            }
+
+            .account-email {
+                color: #94a3b8;
+                font-size: 0.8rem;
+                font-family: monospace;
+                margin-top: 2px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .account-id {
+                color: #64748b;
+                font-size: 0.7rem;
+                font-family: monospace;
+                margin-top: 2px;
+            }
+
+            .account-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                flex-shrink: 0;
+            }
+
+            .btn-sm {
+                padding: 6px 14px;
+                border-radius: 20px;
+                border: 1px solid;
+                background: transparent;
+                color: #e2e8f0;
+                font-family: inherit;
+                font-size: 0.75rem;
+                cursor: pointer;
+                transition: all 0.2s;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+            }
+
+            .btn-sm.logout {
+                border-color: rgba(239, 68, 68, 0.5);
+                color: #fca5a5;
+            }
+            .btn-sm.logout:hover {
+                background: rgba(239, 68, 68, 0.2);
+                box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+            }
+
+            .btn-sm.edit {
+                border-color: rgba(96, 165, 250, 0.5);
+                color: #93c5fd;
+            }
+            .btn-sm.edit:hover {
+                background: rgba(96, 165, 250, 0.15);
+            }
+
+            .btn-sm.danger {
+                border-color: rgba(239, 68, 68, 0.3);
+                color: #f87171;
+                font-size: 0.7rem;
+            }
+            .btn-sm.danger:hover {
+                background: rgba(239, 68, 68, 0.2);
+            }
+
+            /* Login / Register forms */
+            .auth-form {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .auth-input {
+                width: 100%;
+                padding: 10px 14px;
+                border-radius: 12px;
+                border: 1px solid rgba(192, 132, 252, 0.3);
+                background: rgba(0, 0, 0, 0.4);
+                color: #e2e8f0;
+                font-family: inherit;
+                font-size: 0.9rem;
+                outline: none;
+                transition:
+                    border-color 0.2s,
+                    box-shadow 0.2s;
+            }
+
+            .auth-input:focus {
+                border-color: #c084fc;
+                box-shadow: 0 0 8px rgba(192, 132, 252, 0.3);
+            }
+
+            .auth-input::placeholder {
+                color: #64748b;
+            }
+
+            .auth-row {
+                display: flex;
+                gap: 8px;
+            }
+
+            .auth-row .auth-input {
+                flex: 1;
+            }
+
+            .btn-auth {
+                width: 100%;
+                padding: 12px;
+                border-radius: 30px;
+                border: none;
+                background: linear-gradient(135deg, #c084fc 0%, #60a5fa 100%);
+                color: #fff;
+                font-family: inherit;
+                font-weight: 700;
+                font-size: 0.95rem;
+                cursor: pointer;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                transition: all 0.2s;
+                box-shadow: 0 4px 12px rgba(192, 132, 252, 0.3);
+            }
+
+            .btn-auth:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 20px rgba(192, 132, 252, 0.5);
+            }
+
+            .btn-auth:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .auth-toggle {
+                text-align: center;
+                color: #94a3b8;
+                font-size: 0.8rem;
+                margin-top: 4px;
+            }
+
+            .auth-toggle a {
+                color: #c084fc;
+                cursor: pointer;
+                text-decoration: underline;
+            }
+            .auth-toggle a:hover {
+                color: #a78bfa;
+            }
+
+            .auth-error {
+                background: rgba(239, 68, 68, 0.15);
+                border: 1px solid rgba(239, 68, 68, 0.4);
+                border-radius: 10px;
+                padding: 8px 12px;
+                color: #fca5a5;
+                font-size: 0.8rem;
+                text-align: center;
+            }
+
+            .input-file-hidden {
+                display: none;
+            }
+
+            /* Username edit inline */
+            .username-edit-row {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+            }
+
+            .username-edit-row .auth-input {
+                flex: 1;
+                padding: 6px 10px;
+                font-size: 0.85rem;
+            }
+
+            /* ═══════════════════════════════════════════════
+           ONLINE TOGGLE
+           ═══════════════════════════════════════════════ */
+
+            .online-toggle-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: rgba(0, 0, 0, 0.4);
+                border-radius: 40px;
+                padding: 8px 16px;
+                margin: 20px 0;
+                border: 1px solid rgba(192, 132, 252, 0.3);
+            }
+
+            .online-toggle-label {
+                color: #cbd5e1;
+                font-size: 0.85rem;
+                font-weight: 500;
+            }
+
+            .toggle-switch {
+                position: relative;
+                width: 48px;
+                height: 26px;
+                flex-shrink: 0;
+            }
+
+            .toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+            .toggle-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(100, 116, 139, 0.5);
+                border-radius: 26px;
+                transition: all 0.3s;
+                border: 1px solid rgba(148, 163, 184, 0.3);
+            }
+
+            .toggle-slider::before {
+                content: "";
+                position: absolute;
+                height: 20px;
+                width: 20px;
+                left: 2px;
+                bottom: 2px;
+                background: #94a3b8;
+                border-radius: 50%;
+                transition: all 0.3s;
+            }
+
+            .toggle-switch input:checked + .toggle-slider {
+                background: rgba(16, 185, 129, 0.4);
+                border-color: rgba(16, 185, 129, 0.6);
+            }
+
+            .toggle-switch input:checked + .toggle-slider::before {
+                transform: translateX(22px);
+                background: #10b981;
+                box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+            }
+
+            /* Info panel – like game UI windows */
+            .game-info {
+                background: rgba(0, 0, 0, 0.55);
+                border-radius: 20px;
+                padding: 20px;
+                margin-bottom: 25px;
+                border: 1px solid rgba(96, 165, 250, 0.3);
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            }
+
+            .info-row {
+                margin: 12px 0;
+                display: flex;
+                align-items: baseline;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .info-label {
+                font-weight: 700;
+                color: #c084fc;
+                width: 110px;
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .info-value {
+                color: #e2e8f0;
+                flex: 1;
+                font-weight: 500;
+                font-family: monospace;
+                font-size: 0.9rem;
+            }
+
+            .release-notes {
+                background: rgba(0, 0, 0, 0.5);
+                border-radius: 16px;
+                padding: 15px;
+                margin-top: 15px;
+                max-height: 180px;
+                overflow-y: auto;
+                border-left: 3px solid #c084fc;
+            }
+
+            .release-notes h3 {
+                color: #60a5fa;
+                font-size: 0.85rem;
+                margin-bottom: 8px;
+                font-weight: 600;
+            }
+
+            .release-notes pre {
+                font-family: monospace;
+                white-space: pre-wrap;
+                font-size: 0.8rem;
+                color: #cbd5e1;
+                line-height: 1.4;
+            }
+
+            /* Toggle switch style (game-like) */
+            .checkbox-container {
+                background: rgba(0, 0, 0, 0.4);
+                border-radius: 40px;
+                padding: 8px 16px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin: 20px 0;
+                border: 1px solid rgba(192, 132, 252, 0.3);
+            }
+
+            .checkbox-container label {
+                color: #cbd5e1;
+                cursor: pointer;
+                font-size: 0.85rem;
+                font-weight: 500;
+            }
+
+            input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+                accent-color: #c084fc;
+                filter: drop-shadow(0 0 2px #c084fc);
+            }
+
+            /* Main action button – mimics game button glow */
+            .action-button {
+                background: linear-gradient(135deg, #c084fc 0%, #60a5fa 100%);
+                border: none;
+                color: white;
+                font-family: inherit;
+                font-weight: bold;
+                font-size: 1.3rem;
+                padding: 14px 28px;
+                border-radius: 60px;
+                width: 100%;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                box-shadow: 0 4px 15px rgba(192, 132, 252, 0.4);
+                margin: 20px 0 10px;
+            }
+
+            .action-button:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(192, 132, 252, 0.6);
+                filter: brightness(1.05);
+            }
+
+            .action-button:active {
+                transform: translateY(1px);
+            }
+
+            .action-button.installed {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            }
+
+            .action-button:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                filter: grayscale(0.2);
+            }
+
+            /* Progress bar – game healthbar style */
+            .progress-container {
+                margin: 15px 0;
+                display: none;
+            }
+
+            .progress-bar {
+                width: 100%;
+                height: 28px;
+                background: rgba(0, 0, 0, 0.6);
+                border-radius: 40px;
+                overflow: hidden;
+                border: 1px solid #60a5fa;
+            }
+
+            .progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #c084fc, #60a5fa);
+                width: 0%;
+                transition: width 0.2s linear;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+                text-shadow: 0 0 2px black;
+            }
+
+            /* Status messages */
+            .status {
+                margin: 15px 0;
+                padding: 10px;
+                border-radius: 12px;
+                text-align: center;
+                font-size: 0.85rem;
+                font-weight: 500;
+                backdrop-filter: blur(4px);
+            }
+
+            .status.info {
+                background: rgba(59, 130, 246, 0.25);
+                color: #90cdf4;
+                border: 1px solid #3b82f6;
+            }
+
+            .status.success {
+                background: rgba(16, 185, 129, 0.25);
+                color: #6ee7b7;
+                border: 1px solid #10b981;
+            }
+
+            .status.error {
+                background: rgba(239, 68, 68, 0.25);
+                color: #fca5a5;
+                border: 1px solid #ef4444;
+            }
+
+            .loading {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 3px solid rgba(255, 255, 255, 0.3);
+                border-top: 3px solid #c084fc;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-right: 12px;
+                vertical-align: middle;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .version-badge {
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 40px;
+                font-size: 0.7rem;
+                font-weight: bold;
+                margin-left: 8px;
+            }
+
+            .badge-stable {
+                background: #10b98120;
+                color: #34d399;
+                border: 1px solid #34d399;
+            }
+
+            .badge-prerelease {
+                background: #f59e0b20;
+                color: #fbbf24;
+                border: 1px solid #fbbf24;
+            }
+
+            /* Scrollbar matching game */
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #1e1e2e;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #c084fc;
+                border-radius: 8px;
+            }
+
+            /* Animations */
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .container {
+                animation: fadeIn 0.5s ease-out;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="particle-canvas"></canvas>
+        <div class="container">
+            <h1>⚔️ ZAYFORGE</h1>
+            <div style="text-align: center">
+                <span class="subtitle">LAUNCHER // v1.0</span>
+            </div>
+
+            <!-- ═══════════════════════════════════════════
+             ACCOUNT PANEL
+             ═══════════════════════════════════════════ -->
+            <div class="account-panel" id="accountPanel">
+                <h2>👤 ACCOUNT</h2>
+
+                <!-- Logged-in view -->
+                <div id="accountLoggedIn" style="display: none">
+                    <div class="account-profile">
+                        <div class="avatar-container" id="avatarContainer">
+                            <img
+                                class="avatar-img"
+                                id="avatarImg"
+                                src=""
+                                alt="PFP"
+                                style="display: none"
+                            />
+                            <div
+                                class="avatar-placeholder"
+                                id="avatarPlaceholder"
+                            >
+                                ?
+                            </div>
+                            <div
+                                class="avatar-upload-overlay"
+                                id="avatarUploadBtn"
+                                title="Upload 16×16 PNG avatar"
+                            >
+                                +
+                            </div>
+                        </div>
+                        <div class="account-info">
+                            <div class="account-username" id="accountUsername">
+                                -
+                            </div>
+                            <div class="account-email" id="accountEmail">-</div>
+                            <div class="account-id" id="accountIdDisplay">
+                                ID: -
+                            </div>
+                        </div>
+                        <div class="account-actions">
+                            <button class="btn-sm edit" id="btnEditUsername">
+                                ✏️ Edit
+                            </button>
+                            <button class="btn-sm logout" id="btnLogout">
+                                🚪 Logout
+                            </button>
+                            <button class="btn-sm danger" id="btnDeleteAccount">
+                                💀 Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Login form -->
+                <div id="accountLogin" style="display: none">
+                    <div class="auth-form" id="loginForm">
+                        <input
+                            class="auth-input"
+                            type="email"
+                            id="loginEmail"
+                            placeholder="Email"
+                        />
+                        <input
+                            class="auth-input"
+                            type="password"
+                            id="loginPassword"
+                            placeholder="Password"
+                        />
+                        <div
+                            class="auth-error"
+                            id="loginError"
+                            style="display: none"
+                        ></div>
+                        <button class="btn-auth" id="btnLogin">🔑 Login</button>
+                        <div class="auth-toggle">
+                            No account? <a id="linkToRegister">Create one →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Register form -->
+                <div id="accountRegister" style="display: none">
+                    <div class="auth-form" id="registerForm">
+                        <input
+                            class="auth-input"
+                            type="text"
+                            id="regUsername"
+                            placeholder="Username (3-20 chars)"
+                            maxlength="20"
+                        />
+                        <input
+                            class="auth-input"
+                            type="email"
+                            id="regEmail"
+                            placeholder="Email"
+                        />
+                        <input
+                            class="auth-input"
+                            type="password"
+                            id="regPassword"
+                            placeholder="Password (min 6 chars)"
+                        />
+                        <div
+                            class="auth-error"
+                            id="regError"
+                            style="display: none"
+                        ></div>
+                        <button class="btn-auth" id="btnRegister">
+                            ✨ Create Account
+                        </button>
+                        <div class="auth-toggle">
+                            Already have one? <a id="linkToLogin">Log in →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Username edit (hidden) -->
+                <div id="accountEditUsername" style="display: none">
+                    <div class="username-edit-row">
+                        <input
+                            class="auth-input"
+                            type="text"
+                            id="editUsernameInput"
+                            placeholder="New username"
+                            maxlength="20"
+                        />
+                        <button class="btn-sm edit" id="btnSaveUsername">
+                            Save
+                        </button>
+                        <button class="btn-sm logout" id="btnCancelUsername">
+                            Cancel
+                        </button>
+                    </div>
+                    <div
+                        class="auth-error"
+                        id="editUsernameError"
+                        style="display: none; margin-top: 6px"
+                    ></div>
+                </div>
+
+                <input
+                    type="file"
+                    class="input-file-hidden"
+                    id="avatarFileInput"
+                    accept="image/png"
+                />
+            </div>
+
+            <!-- ═══════════════════════════════════════════
+             ONLINE TOGGLE
+             ═══════════════════════════════════════════ -->
+            <div
+                class="online-toggle-row"
+                id="onlineToggleRow"
+                style="display: none"
+            >
+                <span class="online-toggle-label"
+                    >🌐 PLAY ONLINE (Cloud Saves &amp; Multiplayer)</span
+                >
+                <label class="toggle-switch">
+                    <input type="checkbox" id="onlineToggle" checked />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <!-- ═══════════════════════════════════════════
+             GAME INFO / RELEASE PANEL
+             ═══════════════════════════════════════════ -->
+            <div class="game-info" id="gameInfo" style="display: none">
+                <div class="info-row">
+                    <span class="info-label">RELEASE</span>
+                    <span class="info-value" id="version">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">STATUS</span>
+                    <span class="info-value" id="releaseType">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">DATE</span>
+                    <span class="info-value" id="releaseDate">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">SIZE</span>
+                    <span class="info-value" id="fileSize">-</span>
+                </div>
+                <div class="release-notes">
+                    <h3>📜 PATCH NOTES</h3>
+                    <pre id="notesContent">Awaiting update...</pre>
+                </div>
+            </div>
+
+            <div class="checkbox-container">
+                <input type="checkbox" id="includePrereleases" />
+                <label for="includePrereleases"
+                    >🔮 INCLUDE PRE-RELEASES (BETA BUILDS)</label
+                >
+            </div>
+
+            <button class="action-button" id="actionButton">
+                🔍 INITIALIZING...
+            </button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+            </div>
+
+            <div id="status"></div>
+        </div>
+
+        <script>
+            const { ipcRenderer } = require("electron");
+
+            // ---------- Particle Background (like game menu) ----------
+            const canvas = document.getElementById("particle-canvas");
+            const ctx = canvas.getContext("2d");
+            let particles = [];
+            let animFrame;
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+
+            function initParticles() {
+                particles = [];
+                const count = Math.min(
+                    120,
+                    Math.floor(window.innerWidth * 0.1),
+                );
+                for (let i = 0; i < count; i++) {
+                    particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        radius: Math.random() * 2.5 + 1,
+                        speed: Math.random() * 30 + 15,
+                        alpha: Math.random() * 0.6 + 0.2,
+                    });
+                }
+            }
+
+            function drawParticles(dt) {
+                if (!ctx) return;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let p of particles) {
+                    p.y -= p.speed * dt;
+                    if (p.y < -10) {
+                        p.y = canvas.height + 10;
+                        p.x = Math.random() * canvas.width;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(192, 132, 252, ${p.alpha * 0.6})`;
+                    ctx.fill();
+                }
+            }
+
+            let lastTime = performance.now();
+            function animateParticles() {
+                const now = performance.now();
+                let dt = Math.min(0.033, (now - lastTime) / 1000);
+                lastTime = now;
+                if (canvas.width !== window.innerWidth) resizeCanvas();
+                drawParticles(dt);
+                requestAnimationFrame(animateParticles);
+            }
+
+            window.addEventListener("resize", () => {
+                resizeCanvas();
+                initParticles();
+            });
+            resizeCanvas();
+            initParticles();
+            animateParticles();
+
+            // ---------- Account State ----------
+            let sessionUser = null;
+            let sessionToken = null;
+
+            // DOM refs – Account
+            const accountPanel = document.getElementById("accountPanel");
+            const accountLoggedIn = document.getElementById("accountLoggedIn");
+            const accountLogin = document.getElementById("accountLogin");
+            const accountRegister = document.getElementById("accountRegister");
+            const accountEditUsername = document.getElementById(
+                "accountEditUsername",
+            );
+            const avatarImg = document.getElementById("avatarImg");
+            const avatarPlaceholder =
+                document.getElementById("avatarPlaceholder");
+            const avatarUploadBtn = document.getElementById("avatarUploadBtn");
+            const avatarFileInput = document.getElementById("avatarFileInput");
+            const accountUsername = document.getElementById("accountUsername");
+            const accountEmail = document.getElementById("accountEmail");
+            const accountIdDisplay =
+                document.getElementById("accountIdDisplay");
+            const onlineToggleRow = document.getElementById("onlineToggleRow");
+            const onlineToggle = document.getElementById("onlineToggle");
+
+            // ---------- Launcher State ----------
+            let currentRelease = null;
+            let currentGamePath = null;
+            let currentLovePath = null;
+            let isInstalled = false;
+
+            const actionButton = document.getElementById("actionButton");
+            const statusDiv = document.getElementById("status");
+            const gameInfoDiv = document.getElementById("gameInfo");
+            const progressContainer =
+                document.getElementById("progressContainer");
+            const progressFill = document.getElementById("progressFill");
+            const includePrereleases =
+                document.getElementById("includePrereleases");
+
+            // ═══════════════════════════════════════════
+            //  ACCOUNT SYSTEM
+            // ═══════════════════════════════════════════
+
+            function showLoginForm() {
+                accountLoggedIn.style.display = "none";
+                accountRegister.style.display = "none";
+                accountEditUsername.style.display = "none";
+                accountLogin.style.display = "block";
+                onlineToggleRow.style.display = "none";
+                clearAuthErrors();
+            }
+
+            function showRegisterForm() {
+                accountLoggedIn.style.display = "none";
+                accountLogin.style.display = "none";
+                accountEditUsername.style.display = "none";
+                accountRegister.style.display = "block";
+                onlineToggleRow.style.display = "none";
+                clearAuthErrors();
+            }
+
+            function showLoggedInView(user) {
+                sessionUser = user;
+                accountLogin.style.display = "none";
+                accountRegister.style.display = "none";
+                accountEditUsername.style.display = "none";
+                accountLoggedIn.style.display = "block";
+                onlineToggleRow.style.display = "block";
+                clearAuthErrors();
+
+                accountUsername.textContent = user.username || "Unknown";
+                accountEmail.textContent = user.email || "";
+                accountIdDisplay.textContent =
+                    "ID: " + (user.id ? user.id.substring(0, 8) + "..." : "-");
+
+                if (
+                    user.avatar &&
+                    user.avatar.startsWith("data:image/png;base64,")
+                ) {
+                    avatarImg.src = user.avatar;
+                    avatarImg.style.display = "block";
+                    avatarPlaceholder.style.display = "none";
+                } else {
+                    avatarImg.style.display = "none";
+                    avatarPlaceholder.style.display = "flex";
+                }
+            }
+
+            function clearAuthErrors() {
+                document.getElementById("loginError").style.display = "none";
+                document.getElementById("regError").style.display = "none";
+                document.getElementById("editUsernameError").style.display =
+                    "none";
+            }
+
+            async function handleLogin() {
+                const email = document
+                    .getElementById("loginEmail")
+                    .value.trim();
+                const password = document.getElementById("loginPassword").value;
+
+                if (!email || !password) {
+                    showLoginError("Email and password are required.");
+                    return;
+                }
+
+                const btn = document.getElementById("btnLogin");
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading"></span> LOGGING IN...';
+                clearAuthErrors();
+
+                try {
+                    const result = await ipcRenderer.invoke(
+                        "auth-login",
+                        email,
+                        password,
+                    );
+                    if (result.success) {
+                        sessionToken = result.token;
+                        showStatus(
+                            "✅ Welcome, " + result.user.username + "!",
+                            "success",
+                        );
+                        showLoggedInView(result.user);
+                    } else {
+                        showLoginError(result.error || "Login failed.");
+                    }
+                } catch (e) {
+                    showLoginError("Network error: " + e.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = "🔑 Login";
+                }
+            }
+
+            async function handleRegister() {
+                const username = document
+                    .getElementById("regUsername")
+                    .value.trim();
+                const email = document.getElementById("regEmail").value.trim();
+                const password = document.getElementById("regPassword").value;
+
+                if (!username || !email || !password) {
+                    showRegError("All fields are required.");
+                    return;
+                }
+                if (username.length < 3) {
+                    showRegError("Username must be at least 3 characters.");
+                    return;
+                }
+                if (password.length < 6) {
+                    showRegError("Password must be at least 6 characters.");
+                    return;
+                }
+
+                const btn = document.getElementById("btnRegister");
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading"></span> CREATING...';
+                clearAuthErrors();
+
+                try {
+                    const result = await ipcRenderer.invoke(
+                        "auth-register",
+                        username,
+                        email,
+                        password,
+                    );
+                    if (result.success) {
+                        sessionToken = result.token;
+                        showStatus(
+                            "🎉 Account created! Welcome, " +
+                                result.user.username +
+                                "!",
+                            "success",
+                        );
+                        showLoggedInView(result.user);
+                    } else {
+                        showRegError(result.error || "Registration failed.");
+                    }
+                } catch (e) {
+                    showRegError("Network error: " + e.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = "✨ Create Account";
+                }
+            }
+
+            async function handleLogout() {
+                sessionToken = null;
+                sessionUser = null;
+                await ipcRenderer.invoke("auth-logout");
+                showLoginForm();
+                showStatus("👋 Logged out. See you soon!", "info");
+            }
+
+            async function handleEditUsername() {
+                accountLoggedIn.style.display = "none";
+                accountEditUsername.style.display = "block";
+                document.getElementById("editUsernameInput").value = sessionUser
+                    ? sessionUser.username
+                    : "";
+                document.getElementById("editUsernameError").style.display =
+                    "none";
+            }
+
+            async function handleSaveUsername() {
+                const newUsername = document
+                    .getElementById("editUsernameInput")
+                    .value.trim();
+                if (!newUsername || newUsername.length < 3) {
+                    document.getElementById("editUsernameError").style.display =
+                        "block";
+                    document.getElementById("editUsernameError").textContent =
+                        "Username must be at least 3 characters.";
+                    return;
+                }
+
+                try {
+                    const result = await ipcRenderer.invoke(
+                        "auth-update-username",
+                        sessionToken,
+                        newUsername,
+                    );
+                    if (result.success) {
+                        showLoggedInView(result.user);
+                        showStatus("✅ Username updated!", "success");
+                    } else {
+                        document.getElementById(
+                            "editUsernameError",
+                        ).style.display = "block";
+                        document.getElementById(
+                            "editUsernameError",
+                        ).textContent = result.error || "Failed to update.";
+                    }
+                } catch (e) {
+                    document.getElementById("editUsernameError").style.display =
+                        "block";
+                    document.getElementById("editUsernameError").textContent =
+                        "Network error: " + e.message;
+                }
+            }
+
+            function handleCancelUsername() {
+                accountEditUsername.style.display = "none";
+                accountLoggedIn.style.display = "block";
+                document.getElementById("editUsernameError").style.display =
+                    "none";
+            }
+
+            async function handleAvatarUpload(file) {
+                if (!file) return;
+
+                // Validate it's a PNG
+                if (
+                    !file.type.startsWith("image/png") &&
+                    !file.name.toLowerCase().endsWith(".png")
+                ) {
+                    showStatus("❌ Avatar must be a PNG file.", "error");
+                    return;
+                }
+
+                try {
+                    const buffer = await file.arrayBuffer();
+                    showStatus("📤 Uploading avatar...", "info");
+
+                    const result = await ipcRenderer.invoke(
+                        "auth-upload-avatar-buffer",
+                        sessionToken,
+                        Array.from(new Uint8Array(buffer)),
+                    );
+                    if (result.success) {
+                        showLoggedInView(result.user);
+                        showStatus("✅ Avatar updated!", "success");
+                    } else {
+                        showStatus(
+                            "❌ " + (result.error || "Upload failed"),
+                            "error",
+                        );
+                    }
+                } catch (e) {
+                    showStatus("❌ Error: " + e.message, "error");
+                }
+            }
+
+            async function handleDeleteAvatar() {
+                if (!confirm("Remove your profile picture?")) return;
+                try {
+                    const result = await ipcRenderer.invoke(
+                        "auth-delete-avatar",
+                        sessionToken,
+                    );
+                    if (result.success) {
+                        showLoggedInView(result.user);
+                        showStatus("🗑️ Avatar removed.", "info");
+                    } else {
+                        showStatus("❌ " + (result.error || "Failed"), "error");
+                    }
+                } catch (e) {
+                    showStatus("❌ Error: " + e.message, "error");
+                }
+            }
+
+            async function handleDeleteAccount() {
+                if (
+                    !confirm(
+                        "⚠️ PERMANENTLY DELETE your ZayForge account and ALL game saves?\n\nThis CANNOT be undone!",
+                    )
+                )
+                    return;
+                if (
+                    !confirm(
+                        "Are you absolutely sure? Type DELETE below to confirm.",
+                    )
+                )
+                    return;
+
+                try {
+                    showStatus("💀 Deleting account...", "info");
+                    const result = await ipcRenderer.invoke(
+                        "auth-delete-account",
+                        sessionToken,
+                    );
+                    if (result.success) {
+                        sessionToken = null;
+                        sessionUser = null;
+                        showLoginForm();
+                        showStatus(
+                            "Account deleted. Farewell, forger.",
+                            "info",
+                        );
+                    } else {
+                        showStatus(
+                            "❌ " + (result.error || "Failed to delete."),
+                            "error",
+                        );
+                    }
+                } catch (e) {
+                    showStatus("❌ Error: " + e.message, "error");
+                }
+            }
+
+            function showLoginError(msg) {
+                const el = document.getElementById("loginError");
+                el.textContent = msg;
+                el.style.display = "block";
+            }
+
+            function showRegError(msg) {
+                const el = document.getElementById("regError");
+                el.textContent = msg;
+                el.style.display = "block";
+            }
+
+            // Account event listeners
+            document
+                .getElementById("btnLogin")
+                .addEventListener("click", handleLogin);
+            document
+                .getElementById("btnRegister")
+                .addEventListener("click", handleRegister);
+            document
+                .getElementById("btnLogout")
+                .addEventListener("click", handleLogout);
+            document
+                .getElementById("btnEditUsername")
+                .addEventListener("click", handleEditUsername);
+            document
+                .getElementById("btnSaveUsername")
+                .addEventListener("click", handleSaveUsername);
+            document
+                .getElementById("btnCancelUsername")
+                .addEventListener("click", handleCancelUsername);
+            document
+                .getElementById("btnDeleteAccount")
+                .addEventListener("click", handleDeleteAccount);
+            document
+                .getElementById("linkToRegister")
+                .addEventListener("click", showRegisterForm);
+            document
+                .getElementById("linkToLogin")
+                .addEventListener("click", showLoginForm);
+
+            // Enter key to submit forms
+            document
+                .getElementById("loginPassword")
+                .addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") handleLogin();
+                });
+            document
+                .getElementById("regPassword")
+                .addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") handleRegister();
+                });
+            document
+                .getElementById("editUsernameInput")
+                .addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") handleSaveUsername();
+                });
+
+            // Avatar upload
+            avatarUploadBtn.addEventListener("click", () =>
+                avatarFileInput.click(),
+            );
+            avatarFileInput.addEventListener("change", () => {
+                if (avatarFileInput.files.length > 0) {
+                    handleAvatarUpload(avatarFileInput.files[0]);
+                    avatarFileInput.value = "";
+                }
+            });
+
+            // Double-click avatar to remove it
+            document
+                .getElementById("avatarContainer")
+                .addEventListener("dblclick", (e) => {
+                    if (sessionUser && sessionUser.avatar) {
+                        handleDeleteAvatar();
+                    }
+                });
+
+            // ═══════════════════════════════════════════
+            //  LAUNCHER LOGIC
+            // ═══════════════════════════════════════════
+
+            function showStatus(message, type = "info") {
+                statusDiv.innerHTML = message;
+                statusDiv.className = `status ${type}`;
+                if (type === "info") {
+                    setTimeout(() => {
+                        if (statusDiv.innerHTML === message)
+                            statusDiv.style.opacity = "0";
+                        setTimeout(() => {
+                            if (statusDiv.innerHTML === message)
+                                statusDiv.innerHTML = "";
+                            statusDiv.style.opacity = "1";
+                        }, 300);
+                    }, 3500);
+                }
+            }
+
+            function showProgress(show) {
+                progressContainer.style.display = show ? "block" : "none";
+            }
+
+            function updateProgress(progress) {
+                const percent = Math.round(progress);
+                progressFill.style.width = `${percent}%`;
+                progressFill.textContent = `${percent}%`;
+            }
+
+            function updateButtonState() {
+                if (!currentRelease) {
+                    actionButton.disabled = true;
+                    actionButton.innerHTML = "🔍 SCANNING REALMS...";
+                    actionButton.classList.remove("installed");
+                    return;
+                }
+                actionButton.disabled = false;
+                if (isInstalled && currentLovePath) {
+                    actionButton.innerHTML = "🎮 ENTER THE FORGE";
+                    actionButton.classList.add("installed");
+                } else if (isInstalled && !currentLovePath) {
+                    actionButton.innerHTML = "⚙️ INSTALL LOVE2D ENGINE";
+                    actionButton.classList.remove("installed");
+                } else {
+                    const size = currentRelease.assetSize
+                        ? ` (${(currentRelease.assetSize / 1024 / 1024).toFixed(1)} MB)`
+                        : "";
+                    actionButton.innerHTML = `⬇️ DEPLOY ZAYFORGE ${currentRelease.version}${size}`;
+                    actionButton.classList.remove("installed");
+                }
+            }
+
+            ipcRenderer.on("download-progress", (event, data) => {
+                updateProgress(data.progress);
+                if (data.progress >= 100)
+                    setTimeout(() => showProgress(false), 800);
+            });
+
+            async function checkLove2D() {
+                const result = await ipcRenderer.invoke("check-love2d");
+                if (result.success) {
+                    currentLovePath = result.path;
+                    return true;
+                }
+                return false;
+            }
+
+            async function downloadLove2D() {
+                showProgress(true);
+                showStatus("🔧 DOWNLOADING LOVE2D RUNTIME...", "info");
+                updateButtonState();
+                try {
+                    const result = await ipcRenderer.invoke("download-love2d");
+                    if (result.success) {
+                        currentLovePath = result.path;
+                        showStatus(
+                            "✅ LOVE2D INSTALLED SUCCESSFULLY",
+                            "success",
+                        );
+                        showProgress(false);
+                        await checkForUpdates();
+                        return true;
+                    } else {
+                        showStatus(
+                            `❌ RUNTIME FAILED: ${result.error}`,
+                            "error",
+                        );
+                        showProgress(false);
+                        return false;
+                    }
+                } catch (error) {
+                    showStatus(`⚠️ ERROR: ${error.message}`, "error");
+                    showProgress(false);
+                    return false;
+                }
+            }
+
+            async function downloadGame() {
+                if (!currentRelease) {
+                    showStatus("No release data. Refresh first.", "error");
+                    return false;
+                }
+                showProgress(true);
+                showStatus(
+                    `⬇️ DOWNLOADING ZAYFORGE ${currentRelease.version}...`,
+                    "info",
+                );
+                actionButton.disabled = true;
+                try {
+                    const result = await ipcRenderer.invoke(
+                        "download-game",
+                        currentRelease.downloadUrl,
+                        currentRelease.version,
+                    );
+                    if (result.success) {
+                        currentGamePath = result.path;
+                        isInstalled = true;
+                        showStatus("✨ GAME READY!", "success");
+                        showProgress(false);
+                        await checkLove2D();
+                        updateButtonState();
+                        return true;
+                    } else {
+                        showStatus(
+                            `❌ DOWNLOAD FAILED: ${result.error}`,
+                            "error",
+                        );
+                        showProgress(false);
+                        return false;
+                    }
+                } catch (error) {
+                    showStatus(`⚠️ ${error.message}`, "error");
+                    showProgress(false);
+                    return false;
+                } finally {
+                    actionButton.disabled = false;
+                }
+            }
+
+            async function launchGame() {
+                if (!currentGamePath) {
+                    showStatus("Game not found – please install.", "error");
+                    return;
+                }
+                if (!currentLovePath) {
+                    showStatus("Love2D missing – installing now...", "info");
+                    const success = await downloadLove2D();
+                    if (!success) return;
+                }
+
+                const online = onlineToggle.checked;
+                const accountId = sessionUser && online ? sessionUser.id : null;
+
+                showStatus("🔥 FORGING REALITY...", "info");
+                actionButton.disabled = true;
+                try {
+                    const result = await ipcRenderer.invoke(
+                        "run-game",
+                        currentLovePath,
+                        currentGamePath,
+                        online,
+                        accountId,
+                    );
+                    if (result.success) {
+                        const extra =
+                            online && accountId ? " (online)" : " (offline)";
+                        showStatus(
+                            `🎉 GAME LAUNCHED!${extra} CLOSE LAUNCHER OR ENJOY.`,
+                            "success",
+                        );
+                    } else {
+                        showStatus(`❌ LAUNCH ERROR: ${result.error}`, "error");
+                    }
+                } catch (error) {
+                    showStatus(`⚠️ ${error.message}`, "error");
+                } finally {
+                    actionButton.disabled = false;
+                }
+            }
+
+            async function checkForUpdates() {
+                actionButton.disabled = true;
+                actionButton.innerHTML =
+                    '<span class="loading"></span> CONTACTING SHARD...';
+                try {
+                    const result = await ipcRenderer.invoke(
+                        "get-releases",
+                        includePrereleases.checked,
+                    );
+                    if (result.success) {
+                        currentRelease = result.release;
+                        isInstalled = result.isInstalled;
+                        if (isInstalled) {
+                            const installed = await ipcRenderer.invoke(
+                                "get-installed-version",
+                            );
+                            if (installed) currentGamePath = installed.path;
+                        }
+                        displayGameInfo(currentRelease);
+                        await checkLove2D();
+                        updateButtonState();
+                        showStatus(
+                            currentRelease.isPreRelease
+                                ? `🔮 PRE-RELEASE ${currentRelease.version} DETECTED`
+                                : `⚡ STABLE BUILD ${currentRelease.version}`,
+                            "success",
+                        );
+                    } else {
+                        showStatus(
+                            `⚠️ UPDATE CHECK FAILED: ${result.error}`,
+                            "error",
+                        );
+                        actionButton.innerHTML = "⟳ RETRY";
+                    }
+                } catch (err) {
+                    showStatus(`⚠️ NETWORK ERROR: ${err.message}`, "error");
+                    actionButton.innerHTML = "⟳ RETRY";
+                } finally {
+                    actionButton.disabled = false;
+                }
+            }
+
+            function displayGameInfo(release) {
+                gameInfoDiv.style.display = "block";
+                document.getElementById("version").innerHTML =
+                    `<strong style="color:#c084fc">${release.version}</strong>${isInstalled ? ' <span style="color:#10b981;">✓ DEPLOYED</span>' : ""}`;
+                const releaseTypeHtml = release.isPreRelease
+                    ? '<span class="version-badge badge-prerelease">⚠️ PRERELEASE</span>'
+                    : '<span class="version-badge badge-stable">✅ STABLE</span>';
+                document.getElementById("releaseType").innerHTML =
+                    releaseTypeHtml;
+                document.getElementById("releaseDate").textContent = new Date(
+                    release.releaseDate,
+                ).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                });
+                if (release.assetSize) {
+                    const sizeMB = (release.assetSize / 1024 / 1024).toFixed(1);
+                    document.getElementById("fileSize").innerHTML =
+                        `${sizeMB} MB <span style="color:#64748b;">(compressed)</span>`;
+                }
+                document.getElementById("notesContent").textContent =
+                    release.releaseNotes ||
+                    "✨ No ancient scrolls found for this version.";
+            }
+
+            async function handleActionButtonClick() {
+                if (!currentRelease) {
+                    await checkForUpdates();
+                    return;
+                }
+                if (isInstalled && currentLovePath) await launchGame();
+                else if (isInstalled && !currentLovePath)
+                    await downloadLove2D();
+                else await downloadGame();
+            }
+
+            actionButton.addEventListener("click", handleActionButtonClick);
+            includePrereleases.addEventListener("change", () =>
+                checkForUpdates(),
+            );
+
+            // ═══════════════════════════════════════════
+            //  INITIALIZATION
+            // ═══════════════════════════════════════════
+
+            async function init() {
+                // 1. Try to restore session
+                try {
+                    const session = await ipcRenderer.invoke("get-session");
+                    if (session.loggedIn && session.user) {
+                        sessionToken = session.token;
+                        showLoggedInView(session.user);
+                        if (session.stale) {
+                            showStatus(
+                                "⚠️ Offline mode – using cached session.",
+                                "info",
+                            );
+                        }
+                    } else {
+                        showLoginForm();
+                    }
+                } catch (e) {
+                    showLoginForm();
+                }
+
+                // 2. Check for game updates
+                await checkForUpdates();
+            }
+
+            init();
+        </script>
+    </body>
+</html>

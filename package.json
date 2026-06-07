@@ -1,0 +1,81 @@
+{
+  "name": "zayforgelauncher",
+  "version": "1.0.0",
+  "description": "Official ZayForge Launcher",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:all": "electron-builder --linux --win --mac",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "launcher",
+    "zayforge",
+    "gamelauncher"
+  ],
+  "author": {
+    "name": "Sheldi Pierre",
+    "email": "psheldig@gmail.com"
+  },
+  "homepage": "https://github.com/Sheldevv/ZayForge",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^41.7.1",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.17",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.21.0"
+  },
+  "build": {
+    "appId": "com.sheldevv.zayforge.launcher",
+    "productName": "ZayForge Launcher",
+    "directories": {
+      "output": "dist"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Game",
+      "maintainer": "Sheldi Pierre <psheldig@gmail.com>",
+      "desktop": {
+        "entry": {
+          "Name": "ZayForge Launcher",
+          "Comment": "Official launcher for ZayForge game",
+          "Categories": "Game"
+        }
+      }
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "assets/icon.icns"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "assets/**/*"
+    ]
+  }
+}

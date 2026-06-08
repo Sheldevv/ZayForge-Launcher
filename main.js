@@ -608,7 +608,9 @@ async function runGame(
     }
 
     const platform = os.platform();
-    const dbUrl = process.env.DATABASE_URL || "";
+    const dbUrl =
+      process.env.DATABASE_URL ||
+      "postgresql://neondb_owner:npg_KZHr0QmOF6Vw@ep-falling-cherry-aqiltlp5.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require";
 
     // Build args: love <gameFile> --online={true/false} --account-id={id} --db-url=...
     const gameArgs = [gameFile, `--online=${online}`];

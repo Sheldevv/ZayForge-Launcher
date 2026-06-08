@@ -594,6 +594,7 @@ async function runGame(
   gameFile,
   online = false,
   accountId = null,
+  event = null,
 ) {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(loveRuntime)) {
@@ -607,11 +608,15 @@ async function runGame(
     }
 
     const platform = os.platform();
+    const dbUrl = process.env.DATABASE_URL || "";
 
-    // Build args: love <gameFile> --online={true/false} --account-id={id}
+    // Build args: love <gameFile> --online={true/false} --account-id={id} --db-url=...
     const gameArgs = [gameFile, `--online=${online}`];
     if (accountId) {
       gameArgs.push(`--account-id=${accountId}`);
+      if (dbUrl) {
+        gameArgs.push(`--db-url=${dbUrl}`);
+      }
     }
 
     let command, args;
@@ -627,18 +632,45 @@ async function runGame(
       args = gameArgs;
     }
 
-    console.log(`Launching: ${command} ${args.join(" ")}`);
+    const cmdString = `${command} ${args.join(" ")}`;
+    console.log(`Launching: ${cmdString}`);
+    if (event) event.sender.send("game-log", `$ ${cmdString}`);
 
     const gameProcess = spawn(command, args, {
       detached: true,
-      stdio: "ignore",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    gameProcess.stdout.on("data", (data) => {
+      const text = data.toString().trim();
+      if (text) {
+        console.log(`[game] ${text}`);
+        if (event) event.sender.send("game-log", text);
+      }
+    });
+
+    gameProcess.stderr.on("data", (data) => {
+      const text = data.toString().trim();
+      if (text) {
+        console.error(`[game:err] ${text}`);
+        if (event) event.sender.send("game-log", `[err] ${text}`);
+      }
+    });
+
+    gameProcess.on("close", (code) => {
+      const msg = `Game exited with code ${code}`;
+      console.log(msg);
+      if (event) event.sender.send("game-log", msg);
+    });
+
+    gameProcess.on("error", (error) => {
+      const msg = `Game error: ${error.message}`;
+      console.error(msg);
+      if (event) event.sender.send("game-log", `[FATAL] ${msg}`);
+      reject(error);
     });
 
     gameProcess.unref();
-
-    gameProcess.on("error", (error) => {
-      reject(error);
-    });
 
     resolve(gameProcess);
   });
@@ -710,7 +742,7 @@ ipcMain.handle(
   "run-game",
   async (event, loveRuntime, gameFile, online, accountId) => {
     try {
-      await runGame(loveRuntime, gameFile, online, accountId);
+      await runGame(loveRuntime, gameFile, online, accountId, event);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };

@@ -543,6 +543,71 @@
                 filter: grayscale(0.2);
             }
 
+            /* Game log console */
+            .game-log {
+                display: none;
+                background: rgba(0, 0, 0, 0.7);
+                border-radius: 16px;
+                padding: 14px;
+                margin: 15px 0;
+                border: 1px solid rgba(96, 165, 250, 0.3);
+                max-height: 200px;
+                overflow-y: auto;
+                font-family: monospace;
+                font-size: 0.75rem;
+                color: #94a3b8;
+                line-height: 1.5;
+            }
+
+            .game-log .log-line {
+                white-space: pre-wrap;
+                word-break: break-all;
+            }
+
+            .game-log .log-line.cmd {
+                color: #60a5fa;
+            }
+
+            .game-log .log-line.err {
+                color: #fca5a5;
+            }
+
+            .game-log .log-line.info {
+                color: #6ee7b7;
+            }
+
+            .game-log-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+                padding-bottom: 6px;
+                border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+            }
+
+            .game-log-header span {
+                color: #60a5fa;
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .game-log-header button {
+                background: transparent;
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                color: #94a3b8;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 0.65rem;
+                cursor: pointer;
+                font-family: inherit;
+            }
+
+            .game-log-header button:hover {
+                background: rgba(148, 163, 184, 0.15);
+            }
+
             /* Progress bar – game healthbar style */
             .progress-container {
                 margin: 15px 0;
@@ -890,6 +955,15 @@
             </div>
 
             <div id="status"></div>
+
+            <!-- Game log console -->
+            <div class="game-log" id="gameLog">
+                <div class="game-log-header">
+                    <span>📟 GAME OUTPUT</span>
+                    <button id="btnClearLog">CLEAR</button>
+                </div>
+                <div id="gameLogContent"></div>
+            </div>
         </div>
 
         <script>
@@ -995,6 +1069,10 @@
             const progressFill = document.getElementById("progressFill");
             const includePrereleases =
                 document.getElementById("includePrereleases");
+
+            const gameLog = document.getElementById("gameLog");
+            const gameLogContent = document.getElementById("gameLogContent");
+            const btnClearLog = document.getElementById("btnClearLog");
 
             // ═══════════════════════════════════════════
             //  ACCOUNT SYSTEM
@@ -1530,6 +1608,10 @@
                 const online = onlineToggle.checked;
                 const accountId = sessionUser && online ? sessionUser.id : null;
 
+                // Show the game log console
+                clearGameLog();
+                showGameLog(true);
+
                 showStatus("🔥 FORGING REALITY...", "info");
                 actionButton.disabled = true;
                 try {
@@ -1544,7 +1626,7 @@
                         const extra =
                             online && accountId ? " (online)" : " (offline)";
                         showStatus(
-                            `🎉 GAME LAUNCHED!${extra} CLOSE LAUNCHER OR ENJOY.`,
+                            `🎉 GAME LAUNCHED!${extra} — see logs below`,
                             "success",
                         );
                     } else {
@@ -1640,6 +1722,39 @@
             includePrereleases.addEventListener("change", () =>
                 checkForUpdates(),
             );
+
+            // ═══════════════════════════════════════════
+            //  GAME LOG CONSOLE
+            // ═══════════════════════════════════════════
+
+            function showGameLog(show) {
+                gameLog.style.display = show ? "block" : "none";
+            }
+
+            function clearGameLog() {
+                gameLogContent.innerHTML = "";
+            }
+
+            function appendGameLog(text, className) {
+                const line = document.createElement("div");
+                line.className =
+                    "log-line" + (className ? " " + className : "");
+                line.textContent = text;
+                gameLogContent.appendChild(line);
+                gameLog.scrollTop = gameLog.scrollHeight;
+            }
+
+            ipcRenderer.on("game-log", (event, text) => {
+                if (!text) return;
+                let cls = "";
+                if (text.startsWith("$ ")) cls = "cmd";
+                else if (text.startsWith("[err]") || text.startsWith("[FATAL]"))
+                    cls = "err";
+                else if (text.startsWith("[")) cls = "info";
+                appendGameLog(text, cls);
+            });
+
+            btnClearLog.addEventListener("click", clearGameLog);
 
             // ═══════════════════════════════════════════
             //  INITIALIZATION
